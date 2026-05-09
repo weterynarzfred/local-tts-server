@@ -1,0 +1,4 @@
+@echo off
+
+start "" "C:/Program Files/Waterfox/waterfox" http://localhost:3776
+"C:/Program Files/Git/bin/bash.exe" -c "cd '/h/tts/chatterbox' && node ./server.js"
