@@ -165,6 +165,35 @@
       font-size: 0.85rem;
       white-space: pre-wrap;
     }
+
+    #progress-bar {
+      margin-top: 0.75rem;
+    }
+
+    #progress-bar progress {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 3px;
+      border: none;
+      border-radius: 2px;
+    }
+
+    #progress-bar progress::-webkit-progress-bar {
+      background: #01080f;
+      border-radius: 2px;
+    }
+
+    #progress-bar progress::-webkit-progress-value {
+      background: #2978d1;
+      border-radius: 2px;
+      transition: width 0.15s;
+    }
+
+    #progress-bar progress::-moz-progress-bar {
+      background: #2978d1;
+      border-radius: 2px;
+    }
   </style>
 </head>
 
@@ -195,6 +224,8 @@
     </div>
   </form>
 
+  <div id="progress-bar" hidden><progress id="progress" value="0" max="1"></progress></div>
+
   <div id="result" hidden>
     <audio id="player" controls></audio>
     <a id="result-download" download>Download</a>
@@ -223,6 +254,8 @@
     const player = document.getElementById("player");
     const downloadLink = document.getElementById("result-download");
     const errorBox = document.getElementById("error");
+    const progressBar = document.getElementById("progress-bar");
+    const progress = document.getElementById("progress");
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -231,6 +264,8 @@
       status.textContent = "Generating...";
       result.hidden = true;
       errorBox.hidden = true;
+      progress.value = 0;
+      progressBar.hidden = false;
 
       try {
         const res = await fetch("/synthesize", {
@@ -239,26 +274,58 @@
           body: new URLSearchParams(new FormData(form)),
         });
 
-        const data = await res.json();
-
         if (!res.ok) {
-          throw new Error(data.error || `Server error ${res.status}`);
+          const text = await res.text();
+          throw new Error(text || `Server error ${res.status}`);
         }
 
-        player.src = data.url;
-        downloadLink.href = data.url;
-        downloadLink.textContent = data.filename;
-        downloadLink.download = data.filename;
-        result.hidden = false;
-        result.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        player.play();
-        status.textContent = "";
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        outer: while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop();
+
+          let eventType = null;
+          let eventData = null;
+          for (const line of lines) {
+            if (line.startsWith("event: ")) {
+              eventType = line.slice(7).trim();
+            } else if (line.startsWith("data: ")) {
+              eventData = line.slice(6).trim();
+            } else if (line === "" && eventType && eventData) {
+              const data = JSON.parse(eventData);
+              if (eventType === "progress") {
+                progress.value = data.value;
+              } else if (eventType === "done") {
+                progress.value = 1;
+                player.src = data.url;
+                downloadLink.href = data.url;
+                downloadLink.textContent = data.filename;
+                downloadLink.download = data.filename;
+                result.hidden = false;
+                result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                player.play();
+                break outer;
+              } else if (eventType === "error") {
+                throw new Error(data.error);
+              }
+              eventType = null;
+              eventData = null;
+            }
+          }
+        }
       } catch (err) {
         errorBox.textContent = err.message;
         errorBox.hidden = false;
-        status.textContent = "";
       } finally {
         submitBtn.disabled = false;
+        status.textContent = "";
+        progressBar.hidden = true;
       }
     });
   </script>

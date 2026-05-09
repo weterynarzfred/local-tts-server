@@ -1,4 +1,5 @@
 import asyncio
+import json
 import mimetypes
 import re
 from datetime import datetime
@@ -7,7 +8,7 @@ from pathlib import Path
 import torch
 import torchaudio
 from fastapi import FastAPI, Form, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
 from tts import DEVICE, split_text, stitch, to_mp3
 from chatterbox.tts import ChatterboxTTS
@@ -31,23 +32,49 @@ def _normalize_text(text: str) -> str:
     text = text.strip()
     text = re.sub(r"[^\S\n]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
-    for src, dst in [("‘", "'"), ("’", "'"), ("“", '"'), ("”", '"'), ("–", "-"), ("—", "-")]:
+    for src, dst in [("'", "'"), ("'", "'"), ("“", '"'), ("”", '"'), ("–", "-"), ("—", "-")]:
         text = text.replace(src, dst)
     return text
 
 
-def _do_generate(text: str, exaggeration: float, audio_prompt: str | None) -> Path:
+def _do_generate_with_progress(text: str, exaggeration: float, audio_prompt: str | None,
+                                progress_q: asyncio.Queue, loop: asyncio.AbstractEventLoop) -> Path:
+    import tqdm as tqdm_module
+
     chunks = split_text(text)
-    wavs = []
-    for chunk in chunks:
-        wav = _model.generate(chunk, audio_prompt_path=audio_prompt, exaggeration=exaggeration)
-        wavs.append(wav)
-    final = stitch(wavs, _model.sr) if len(wavs) > 1 else wavs[0]
-    OUTPUT_DIR.mkdir(exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    wav_path = OUTPUT_DIR / f"{timestamp}.wav"
-    torchaudio.save(str(wav_path), final, _model.sr)
-    return to_mp3(wav_path)
+    n_chunks = len(chunks)
+    current_chunk = [0]
+
+    original_update = tqdm_module.tqdm.update
+
+    def patched_update(self, n=1):
+        result = original_update(self, n)
+        if self.total:
+            overall = (current_chunk[0] + self.n / self.total) / n_chunks
+            loop.call_soon_threadsafe(progress_q.put_nowait, min(overall, 1.0))
+        return result
+
+    tqdm_module.tqdm.update = patched_update
+    try:
+        wavs = []
+        for i, chunk in enumerate(chunks):
+            current_chunk[0] = i
+            wav = _model.generate(chunk, audio_prompt_path=audio_prompt, exaggeration=exaggeration)
+            wavs.append(wav)
+
+        final = stitch(wavs, _model.sr) if len(wavs) > 1 else wavs[0]
+        OUTPUT_DIR.mkdir(exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        wav_path = OUTPUT_DIR / f"{timestamp}.wav"
+        torchaudio.save(str(wav_path), final, _model.sr)
+        return to_mp3(wav_path)
+    finally:
+        tqdm_module.tqdm.update = original_update
+        loop.call_soon_threadsafe(progress_q.put_nowait, None)
+
+
+def _sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 
 @app.get("/")
@@ -115,15 +142,33 @@ async def synthesize(
             raise HTTPException(400, "Voice file not found.")
         audio_prompt = str(voice_path)
 
-    async with _lock:
-        if _model is None:
-            loop = asyncio.get_running_loop()
-            _model = await loop.run_in_executor(None, lambda: ChatterboxTTS.from_pretrained(device=DEVICE))
+    loop = asyncio.get_running_loop()
+    progress_q: asyncio.Queue = asyncio.Queue()
 
-        loop = asyncio.get_running_loop()
-        try:
-            mp3_path = await loop.run_in_executor(None, _do_generate, text, exaggeration, audio_prompt)
-        except Exception as e:
-            raise HTTPException(500, str(e))
+    async def stream():
+        global _model
+        async with _lock:
+            if _model is None:
+                try:
+                    _model = await loop.run_in_executor(None, lambda: ChatterboxTTS.from_pretrained(device=DEVICE))
+                except Exception as e:
+                    yield _sse("error", {"error": str(e)})
+                    return
 
-    return {"url": f"/audio/{mp3_path.name}", "filename": mp3_path.name}
+            future = loop.run_in_executor(
+                None, _do_generate_with_progress, text, exaggeration, audio_prompt, progress_q, loop
+            )
+
+            while True:
+                value = await progress_q.get()
+                if value is None:
+                    break
+                yield _sse("progress", {"value": value})
+
+            try:
+                mp3_path = await future
+                yield _sse("done", {"url": f"/audio/{mp3_path.name}", "filename": mp3_path.name})
+            except Exception as e:
+                yield _sse("error", {"error": str(e)})
+
+    return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
