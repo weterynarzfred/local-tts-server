@@ -11,7 +11,7 @@ import torchaudio
 from chatterbox.tts import ChatterboxTTS
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-MAX_CHARS = 750
+MAX_CHARS = 500
 SILENCE_S = 0.3
 
 warnings.filterwarnings("ignore", category=FutureWarning)

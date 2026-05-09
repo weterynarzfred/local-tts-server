@@ -7,9 +7,11 @@ const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT) || 3776;
 const ROOT_DIR = __dirname;
 const OUTPUT_DIR = path.join(ROOT_DIR, "output");
+const VOICES_DIR = path.join(ROOT_DIR, "voice_samples");
 const PAGE_PATH = path.join(ROOT_DIR, "index.html");
 const VENV_PYTHON = path.join(ROOT_DIR, ".venv", "Scripts", "python.exe");
 const PYTHON_CMD = fs.existsSync(VENV_PYTHON) ? VENV_PYTHON : "python";
+const AUDIO_EXTS = new Set([".mp3", ".wav", ".flac", ".ogg"]);
 
 function sendText(res, status, body) {
   res.writeHead(status, { "Content-Type": "text/plain; charset=utf-8" });
@@ -101,6 +103,22 @@ const server = http.createServer((req, res) => {
 
   const requestUrl = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
+  if (req.method === "GET" && requestUrl.pathname === "/voices") {
+    try {
+      const files = fs.readdirSync(VOICES_DIR)
+        .filter((f) => AUDIO_EXTS.has(path.extname(f).toLowerCase()))
+        .sort()
+        .map((f) => ({
+          filename: f,
+          label: f.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        }));
+      sendJson(res, 200, files);
+    } catch {
+      sendJson(res, 200, []);
+    }
+    return;
+  }
+
   if (req.method === "GET" && requestUrl.pathname === "/") {
     fs.readFile(PAGE_PATH, "utf8", (readErr, html) => {
       if (readErr) {
@@ -156,7 +174,7 @@ const server = http.createServer((req, res) => {
         .replaceAll(/[–—]/g, "-");
       const exaggerationRaw = params.get("exaggeration") || "";
       const exaggeration = Number(exaggerationRaw);
-      const audioPrompt = (params.get("audio_prompt") || "").trim();
+      const voiceFile = (params.get("voice") || "").trim();
 
       if (!text) {
         sendJson(res, 400, { error: "Text is required." });
@@ -165,6 +183,19 @@ const server = http.createServer((req, res) => {
       if (!Number.isFinite(exaggeration) || exaggeration < 0 || exaggeration > 1) {
         sendJson(res, 400, { error: "Exaggeration must be a number between 0 and 1." });
         return;
+      }
+
+      let audioPrompt = null;
+      if (voiceFile) {
+        if (path.basename(voiceFile) !== voiceFile || !AUDIO_EXTS.has(path.extname(voiceFile).toLowerCase())) {
+          sendJson(res, 400, { error: "Invalid voice file." });
+          return;
+        }
+        audioPrompt = path.join(VOICES_DIR, voiceFile);
+        if (!fs.existsSync(audioPrompt)) {
+          sendJson(res, 400, { error: "Voice file not found." });
+          return;
+        }
       }
 
       runTts(text, exaggeration, audioPrompt, (ttsErr, filePath) => {
