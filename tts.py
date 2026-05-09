@@ -1,14 +1,10 @@
-import argparse
 import re
 import subprocess
-import sys
 import warnings
-from datetime import datetime
 from pathlib import Path
 
 import torch
 import torchaudio
-from chatterbox.tts import ChatterboxTTS
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MAX_CHARS = 500
@@ -77,47 +73,3 @@ def to_mp3(wav_path: Path) -> Path:
     )
     wav_path.unlink()
     return mp3_path
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--text", help="Text or '-' for stdin")
-    parser.add_argument("--exaggeration", type=float, default=0.5)
-    parser.add_argument("--audio-prompt", type=str, default=None)
-    args = parser.parse_args()
-
-    text = args.text
-    if text == "-":
-        text = sys.stdin.read()
-    if not text or not text.strip():
-        parser.error("--text is required")
-
-    chunks = split_text(text.strip())
-    print(f"Chunks: {len(chunks)}", flush=True)
-
-    model = ChatterboxTTS.from_pretrained(device=DEVICE)
-
-    wavs = []
-    for i, chunk in enumerate(chunks):
-        print(f"Chunk {i + 1}/{len(chunks)}: {chunk[:60]}{'...' if len(chunk) > 60 else ''}", flush=True)
-        wav = model.generate(
-            chunk,
-            audio_prompt_path=args.audio_prompt,
-            exaggeration=args.exaggeration,
-        )
-        wavs.append(wav)
-
-    final = stitch(wavs, model.sr) if len(wavs) > 1 else wavs[0]
-
-    output_dir = Path("output")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    wav_path = output_dir / f"{timestamp}.wav"
-    torchaudio.save(str(wav_path), final, model.sr)
-
-    mp3_path = to_mp3(wav_path)
-    print(f"Saved: {mp3_path}")
-
-
-if __name__ == "__main__":
-    main()
