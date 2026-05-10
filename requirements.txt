@@ -1,0 +1,13 @@
+# torch and torchaudio are installed separately by setup.bat with CUDA index URL
+# because chatterbox-tts can downgrade torch if installed from PyPI first.
+# ffmpeg must be installed separately (https://ffmpeg.org/download.html) and on PATH.
+
+chatterbox-tts==0.1.7
+kokoro==0.9.4
+qwen-tts==0.1.1
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+python-multipart==0.0.27
+huggingface_hub==0.36.2
+numpy==1.26.4
+soundfile==0.13.1

@@ -39,6 +39,10 @@ QWEN3_REF_TEXT = (
     "ready to lose herself in another story for a while."
 )
 
+KOKORO_DEFAULT_VOICE_STEMS = [
+    "af_bella", "af_heart", "am_fenrir", "am_puck", "bf_emma", "bm_george",
+]
+
 KOKORO_LANG_CODES = {
     "a": {"af", "am"},
     "b": {"bf", "bm"},
@@ -72,11 +76,25 @@ def _resolve_chatterbox_voice(voice_name: str | None, default: str | None) -> st
   return default
 
 
+def _ensure_kokoro_file(filename: str) -> Path:
+  local = KOKORO_MODEL_ROOT / filename
+  if not local.exists():
+    from huggingface_hub import hf_hub_download
+    hf_hub_download(repo_id="hexgrad/Kokoro-82M", filename=filename,
+                    local_dir=str(KOKORO_MODEL_ROOT))
+  return local
+
+
 def _resolve_kokoro_voice(voice_name: str | None, default_stem: str) -> str:
   stem = voice_name if voice_name else default_stem
-  p = KOKORO_VOICES_DIR / f"{stem}.pt"
-  if p.exists():
-    return str(p)
+  try:
+    return str(_ensure_kokoro_file(f"voices/{stem}.pt"))
+  except Exception:
+    if stem != default_stem:
+      try:
+        return str(_ensure_kokoro_file(f"voices/{default_stem}.pt"))
+      except Exception:
+        pass
   return str(KOKORO_VOICES_DIR / f"{default_stem}.pt")
 
 
@@ -148,12 +166,12 @@ def _do_chatterbox_generate(text: str, exaggeration: float, default_audio_prompt
 
 def _load_kokoro_kmodel():
   from kokoro.model import KModel
+  KOKORO_MODEL_ROOT.mkdir(parents=True, exist_ok=True)
+  KOKORO_VOICES_DIR.mkdir(parents=True, exist_ok=True)
+  config = _ensure_kokoro_file("config.json")
+  model = _ensure_kokoro_file("kokoro-v1_0.pth")
   return (
-      KModel(
-          repo_id="hexgrad/Kokoro-82M",
-          config=str(KOKORO_MODEL_ROOT / "config.json"),
-          model=str(KOKORO_MODEL_ROOT / "kokoro-v1_0.pth"),
-      )
+      KModel(repo_id="hexgrad/Kokoro-82M", config=str(config), model=str(model))
       .to(DEVICE)
       .eval()
   )
@@ -300,10 +318,12 @@ async def voices():
   kokoro = []
   try:
     files = sorted(f for f in KOKORO_VOICES_DIR.iterdir() if f.suffix == ".pt")
-    kokoro = [{"filename": f.name,
-               "label": _format_label(f.name)} for f in files]
+    kokoro = [{"filename": f.name, "label": _format_label(f.name)} for f in files]
   except Exception:
     pass
+  if not kokoro:
+    kokoro = [{"filename": f"{s}.pt", "label": _format_label(f"{s}.pt")}
+              for s in KOKORO_DEFAULT_VOICE_STEMS]
 
   qwen3 = []
   try:
@@ -424,8 +444,6 @@ async def synthesize(
 
     voice_stem = Path(voice).stem if voice else "af_heart"
     voice_path = str(KOKORO_VOICES_DIR / f"{voice_stem}.pt")
-    if not Path(voice_path).exists():
-      raise HTTPException(400, "Voice file not found.")
 
     async def stream():
       global _kokoro_kmodel
