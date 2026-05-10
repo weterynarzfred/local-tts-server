@@ -1,16 +1,16 @@
 # TTS
 
-Local text-to-speech web UI. Three engines, multi-voice speaker tags, MP3 output.
+A quick local text-to-speech web UI. Three engines, multi-voice speaker tags, MP3 output.
 
 ![screenshot](screenshot.png)
 
 ## Engines
 
-| Engine | Speed | Method |
-|--------|-------|--------|
-| **Chatterbox** | slow | voice cloning from audio sample |
-| **Kokoro 82M** | fast | pre-trained voice models |
-| **Qwen3 VoiceDesign** | very slow | text description → voice |
+| Engine                | Speed     | Method                          |
+| --------------------- | --------- | ------------------------------- |
+| **Chatterbox**        | slow      | voice cloning from audio sample |
+| **Kokoro 82M**        | fast      | pre-trained voice models        |
+| **Qwen3 VoiceDesign** | very slow | text description → voice        |
 
 ## Requirements
 
@@ -41,7 +41,7 @@ Drop `.mp3`/`.wav` files into `voice_samples/` — they appear in the voice drop
 
 ## Speaker tags
 
-Insert `[name]` anywhere in the text to switch voices mid-generation:
+Instead of using the voice dropdown, you can insert `[name]` tags anywhere in the text to switch voices mid-generation:
 
 ```
 [geralt] Some text in Geralt's voice.
@@ -55,4 +55,4 @@ For Qwen3, define a voice on first use with a description:
 Text here...
 ```
 
-The sample is saved to `voice_samples/qwen3/` and reused in future generations.
+The sample is saved to `voice_samples/qwen3/` and reused in future generations. Generating again with a tag that includes description will override the saved voice.
