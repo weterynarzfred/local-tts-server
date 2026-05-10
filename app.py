@@ -10,16 +10,17 @@ import numpy as np
 import torch
 import torchaudio
 from fastapi import FastAPI, Form, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
 from tts import DEVICE, split_text, stitch, to_mp3, parse_voice_segments
 from chatterbox.tts import ChatterboxTTS
 
 ROOT = Path(__file__).parent
 OUTPUT_DIR = ROOT / "output"
+EXAMPLES_DIR = ROOT / "examples"
 VOICES_DIR = ROOT / "voice_samples"
-KOKORO_ROOT = Path("H:/tts/kokoro")
-KOKORO_MODEL_ROOT = KOKORO_ROOT / "models" / "Kokoro-82M"
+KOKORO_MODEL_ROOT = ROOT / "models" / "kokoro"
 KOKORO_VOICES_DIR = KOKORO_MODEL_ROOT / "voices"
 KOKORO_SR = 24000
 AUDIO_EXTS = {".mp3", ".wav", ".flac", ".ogg"}
@@ -285,11 +286,6 @@ def _do_qwen3_generate(text: str, language: str, default_voice_description: str,
 
 # --- Routes ---
 
-@app.get("/")
-async def index():
-  return HTMLResponse((ROOT / "index.html").read_text(encoding="utf-8"))
-
-
 @app.get("/voices")
 async def voices():
   chatterbox = []
@@ -309,7 +305,14 @@ async def voices():
   except Exception:
     pass
 
-  return {"chatterbox": chatterbox, "kokoro": kokoro, "qwen3": []}
+  qwen3 = []
+  try:
+    files = sorted(f for f in QWEN3_VOICES_DIR.iterdir() if f.suffix == ".wav")
+    qwen3 = [{"filename": f.name, "label": _format_label(f.name)} for f in files]
+  except Exception:
+    pass
+
+  return {"chatterbox": chatterbox, "kokoro": kokoro, "qwen3": qwen3}
 
 
 @app.get("/audio/{filename}")
@@ -479,3 +482,51 @@ async def synthesize(
     raise HTTPException(400, f"Unknown engine: {engine}")
 
   return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/examples-meta")
+async def examples_meta():
+  texts = {}
+  for name in ["sample.txt", "sample_with_tags_for_chatterbox.txt",
+               "sample_with_tags_for_kokoro.txt", "sample_with_tags_for_qwen3.txt"]:
+    try:
+      texts[name] = (EXAMPLES_DIR / name).read_text(encoding="utf-8")
+    except Exception:
+      texts[name] = ""
+
+  examples = []
+  try:
+    for f in sorted(EXAMPLES_DIR.glob("*.mp3")):
+      stem = f.stem
+      if stem.startswith("kokoro_"):
+        engine, rest = "kokoro", stem[len("kokoro_"):]
+      elif stem.startswith("chatterbox_"):
+        engine, rest = "chatterbox", stem[len("chatterbox_"):]
+      elif stem.startswith("qwen3_"):
+        engine, rest = "qwen3", stem[len("qwen3_"):]
+      else:
+        continue
+      with_tags = rest == "with_tags"
+      if with_tags:
+        label = "with speaker tags"
+        text_file = f"sample_with_tags_for_{engine}.txt"
+      elif engine == "qwen3":
+        label = rest
+        text_file = "sample.txt"
+      else:
+        label = rest.replace("_", " ").replace("-", " ").title()
+        text_file = "sample.txt"
+      examples.append({"filename": f.name, "engine": engine,
+                        "label": label, "with_tags": with_tags, "text_file": text_file})
+  except Exception:
+    pass
+
+  return {"examples": examples, "texts": texts}
+
+
+if EXAMPLES_DIR.exists():
+  app.mount("/examples", StaticFiles(directory=str(EXAMPLES_DIR)), name="examples")
+
+_frontend_dist = ROOT / "frontend" / "dist"
+if _frontend_dist.exists():
+  app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")

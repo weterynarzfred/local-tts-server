@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>TTS</title>
+    <script type="module" crossorigin src="/assets/index-BMBCmBbU.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-C1UonoWB.css">
+  </head>
+
+  <body>
+    <div id="page-main">
+      <h1>Text to MP3</h1>
+      <a href="#info" class="info-link">examples &amp; info</a>
+      <form id="form">
+        <label for="engine">
+          <div class="label-text">engine</div>
+          <select id="engine" name="engine">
+            <option value="chatterbox">Chatterbox</option>
+            <option value="kokoro">Kokoro 82M</option>
+            <option value="qwen3">Qwen3 VoiceDesign</option>
+          </select>
+        </label>
+
+        <label for="text">
+          <div class="label-text">text</div>
+          <textarea id="text" name="text" required autocomplete="off"></textarea>
+        </label>
+
+        <label id="exaggeration-label" for="exaggeration">
+          <div class="label-text">exaggeration</div>
+          <input id="exaggeration" name="exaggeration" type="number" min="0" max="1" step="0.05" value="0.5" />
+        </label>
+
+        <label id="speed-label" for="speed" style="display: none">
+          <div class="label-text">speed</div>
+          <input id="speed" name="speed" type="number" min="0.5" max="2" step="0.1" value="1.0" />
+        </label>
+
+        <label id="voice-label" for="voice">
+          <div class="label-text" id="voice-label-text">voice sample</div>
+          <select id="voice" name="voice"></select>
+        </label>
+
+        <label id="voice-description-label" for="voice_description" style="display: none">
+          <div class="label-text">voice description</div>
+          <input
+            id="voice_description"
+            name="voice_description"
+            type="text"
+            placeholder="Warm female narrator, slight British accent, calm pace"
+            autocomplete="off"
+          />
+        </label>
+
+        <label id="language-label" for="language" style="display: none">
+          <div class="label-text">language</div>
+          <select id="language" name="language">
+            <option>English</option>
+            <option>Chinese</option>
+            <option>Japanese</option>
+            <option>Korean</option>
+            <option>German</option>
+            <option>French</option>
+            <option>Russian</option>
+            <option>Portuguese</option>
+            <option>Spanish</option>
+            <option>Italian</option>
+          </select>
+        </label>
+
+        <div class="actions">
+          <span class="status" id="status"></span>
+          <button type="submit" id="submit-btn">Generate MP3</button>
+        </div>
+      </form>
+
+      <div id="progress-bar" hidden>
+        <progress id="progress" value="0" max="1"></progress>
+      </div>
+
+      <div id="result" hidden>
+        <audio id="player" controls></audio>
+        <a id="result-download" download>Download</a>
+      </div>
+
+      <div id="error" hidden></div>
+    </div>
+
+    <div id="page-info" style="display: none"></div>
+
+  </body>
+</html>
