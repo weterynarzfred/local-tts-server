@@ -1,334 +1,420 @@
 <!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>TTS</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
 
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>TTS</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+      body {
+        background-color: #043164;
+        color: #eee;
+        font-family: monospace;
+        max-width: 760px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
 
-    body {
-      background-color: #043164;
-      color: #eee;
-      font-family: monospace;
-      max-width: 760px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-    }
+      h1 {
+        text-align: center;
+        font-weight: 700;
+        font-size: 1rem;
+      }
 
-    h1 {
-      text-align: center;
-      font-weight: 700;
-      font-size: 1rem;
-    }
+      form {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        align-items: end;
+        gap: 0.5rem;
+      }
 
-    form {
-      display: grid;
-      grid-template-columns: max-content 1fr;
-      align-items: end;
-      gap: 0.5rem;
-    }
+      label {
+        display: contents;
+      }
 
-    label {
-      display: contents;
-    }
+      .label-text {
+        text-align: right;
+        border-bottom: 1px solid #777;
+      }
 
-    .label-text {
-      text-align: right;
-      border-bottom: 1px solid #777;
-    }
+      input,
+      textarea,
+      button,
+      select {
+        background-color: transparent;
+        font: inherit;
+        color: inherit;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        border: none;
+        background-color: #01080f;
+        border: 1px solid #072342;
+        border-radius: 5px;
+        transition: 0.2s;
+      }
 
-    textarea {
-      min-height: 180px;
-      width: 100%;
-      resize: vertical;
-    }
+      select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23aaa'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.6rem center;
+        padding: 0.3rem 1.8rem 0.3rem 0.5rem;
+        cursor: pointer;
+      }
 
-    input,
-    textarea,
-    button,
-    select {
-      background-color: transparent;
-      font: inherit;
-      color: inherit;
-      width: 100%;
-      min-width: 0;
-      max-width: none;
-      border: none;
-      background-color: #01080f;
-      border: 1px solid #072342;
-      border-radius: 5px;
-      transition: .2s;
-    }
+      input:hover,
+      textarea:hover,
+      button:hover,
+      select:hover {
+        background-color: #222;
+        border-color: #2978d1;
+      }
 
-    select {
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23aaa'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.6rem center;
-      padding: 0.3rem 1.8rem 0.3rem 0.5rem;
-      cursor: pointer;
-    }
+      input:focus,
+      textarea:focus,
+      button:focus,
+      select:focus {
+        outline: none;
+        background-color: #222;
+      }
 
-    input:hover,
-    textarea:hover,
-    button:hover,
-    select:hover {
-      background-color: #222;
-      border-color: #2978d1;
-    }
+      input {
+        padding: 0.3rem 0.5rem;
+      }
 
-    input:focus,
-    textarea:focus,
-    button:focus,
-    select:focus {
-      outline: none;
-      background-color: #222;
-    }
+      textarea {
+        resize: none;
+        min-height: 10rem;
+        height: calc(100vh - 22rem);
+        padding: 0.75rem 1rem;
+      }
 
-    input {
-      padding: .3rem 0.5rem;
-    }
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
 
-    textarea {
-      resize: none;
-      min-height: 10rem;
-      height: calc(100vh - 20rem);
-      padding: 0.75rem 1rem;
-    }
+      input[type="number"] {
+        appearance: textfield;
+        -moz-appearance: textfield;
+      }
 
-    input[type="number"]::-webkit-outer-spin-button,
-    input[type="number"]::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
+      .actions {
+        grid-column-end: span 2;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 1rem;
+      }
 
-    input[type="number"] {
-      appearance: textfield;
-      -moz-appearance: textfield;
-    }
+      .status {
+        font-size: 0.85rem;
+        color: #aaa;
+      }
 
-    .actions {
-      grid-column-end: span 2;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 1rem;
-    }
+      button {
+        display: block;
+        width: fit-content;
+        cursor: pointer;
+        padding: 0.75rem 1rem;
+      }
 
-    .status {
-      font-size: 0.85rem;
-      color: #aaa;
-    }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
 
-    button {
-      display: block;
-      width: fit-content;
-      cursor: pointer;
-      padding: 0.75rem 1rem;
-    }
+      #result {
+        margin-top: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
 
-    button:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
+      #result audio {
+        width: 100%;
+        border-radius: 5px;
+      }
 
-    #result {
-      margin-top: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
+      #result-download {
+        font-size: 0.85rem;
+        color: #aaa;
+        text-decoration: none;
+        text-align: right;
+      }
 
-    #result audio {
-      width: 100%;
-      border-radius: 5px;
-    }
+      #result-download:hover {
+        color: #eee;
+      }
 
-    #result-download {
-      font-size: 0.85rem;
-      color: #aaa;
-      text-decoration: none;
-      text-align: right;
-    }
+      #error {
+        margin-top: 1rem;
+        color: #f87;
+        font-size: 0.85rem;
+        white-space: pre-wrap;
+      }
 
-    #result-download:hover {
-      color: #eee;
-    }
+      #progress-bar {
+        margin-top: 0.75rem;
+      }
 
-    #error {
-      margin-top: 1rem;
-      color: #f87;
-      font-size: 0.85rem;
-      white-space: pre-wrap;
-    }
+      #progress-bar progress {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 3px;
+        border: none;
+        border-radius: 2px;
+      }
 
-    #progress-bar {
-      margin-top: 0.75rem;
-    }
+      #progress-bar progress::-webkit-progress-bar {
+        background: #01080f;
+        border-radius: 2px;
+      }
 
-    #progress-bar progress {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 3px;
-      border: none;
-      border-radius: 2px;
-    }
+      #progress-bar progress::-webkit-progress-value {
+        background: #2978d1;
+        border-radius: 2px;
+        transition: width 0.15s;
+      }
 
-    #progress-bar progress::-webkit-progress-bar {
-      background: #01080f;
-      border-radius: 2px;
-    }
+      #progress-bar progress::-moz-progress-bar {
+        background: #2978d1;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
 
-    #progress-bar progress::-webkit-progress-value {
-      background: #2978d1;
-      border-radius: 2px;
-      transition: width 0.15s;
-    }
+  <body>
+    <h1>Text to MP3</h1>
+    <form id="form">
+      <label for="engine">
+        <div class="label-text">engine</div>
+        <select id="engine" name="engine">
+          <option value="chatterbox">Chatterbox</option>
+          <option value="kokoro">Kokoro 82M</option>
+          <option value="qwen3">Qwen3 VoiceDesign</option>
+        </select>
+      </label>
 
-    #progress-bar progress::-moz-progress-bar {
-      background: #2978d1;
-      border-radius: 2px;
-    }
-  </style>
-</head>
+      <label for="text">
+        <div class="label-text">text</div>
+        <textarea id="text" name="text" required autocomplete="off"></textarea>
+      </label>
 
-<body>
-  <h1>Text to MP3</h1>
-  <form id="form">
-    <label for="text">
-      <div class="label-text">text</div>
-      <textarea id="text" name="text" required></textarea>
-    </label>
+      <label id="exaggeration-label" for="exaggeration">
+        <div class="label-text">exaggeration</div>
+        <input
+          id="exaggeration"
+          name="exaggeration"
+          type="number"
+          min="0"
+          max="1"
+          step="0.05"
+          value="0.5"
+        />
+      </label>
 
-    <label for="exaggeration">
-      <div class="label-text">exaggeration</div>
-      <input id="exaggeration" name="exaggeration" type="number" min="0" max="1" step="0.05"
-        value="0.5" required>
-    </label>
+      <label id="speed-label" for="speed" style="display: none">
+        <div class="label-text">speed</div>
+        <input
+          id="speed"
+          name="speed"
+          type="number"
+          min="0.5"
+          max="2"
+          step="0.1"
+          value="1.0"
+        />
+      </label>
 
-    <label for="voice">
-      <div class="label-text">voice</div>
-      <select id="voice" name="voice">
-        <option value="">— none —</option>
-      </select>
-    </label>
+      <label id="voice-label" for="voice">
+        <div class="label-text" id="voice-label-text">voice sample</div>
+        <select id="voice" name="voice"></select>
+      </label>
 
-    <div class="actions">
-      <span class="status" id="status"></span>
-      <button type="submit" id="submit-btn">Generate MP3</button>
+      <label
+        id="voice-description-label"
+        for="voice_description"
+        style="display: none"
+      >
+        <div class="label-text">voice description</div>
+        <input
+          id="voice_description"
+          name="voice_description"
+          type="text"
+          placeholder="Warm female narrator, slight British accent, calm pace"
+          autocomplete="off"
+        />
+      </label>
+
+      <label id="language-label" for="language" style="display: none">
+        <div class="label-text">language</div>
+        <select id="language" name="language">
+          <option>English</option>
+          <option>Chinese</option>
+          <option>Japanese</option>
+          <option>Korean</option>
+          <option>German</option>
+          <option>French</option>
+          <option>Russian</option>
+          <option>Portuguese</option>
+          <option>Spanish</option>
+          <option>Italian</option>
+        </select>
+      </label>
+
+      <div class="actions">
+        <span class="status" id="status"></span>
+        <button type="submit" id="submit-btn">Generate MP3</button>
+      </div>
+    </form>
+
+    <div id="progress-bar" hidden>
+      <progress id="progress" value="0" max="1"></progress>
     </div>
-  </form>
 
-  <div id="progress-bar" hidden><progress id="progress" value="0" max="1"></progress></div>
+    <div id="result" hidden>
+      <audio id="player" controls></audio>
+      <a id="result-download" download>Download</a>
+    </div>
 
-  <div id="result" hidden>
-    <audio id="player" controls></audio>
-    <a id="result-download" download>Download</a>
-  </div>
+    <div id="error" hidden></div>
 
-  <div id="error" hidden></div>
+    <script>
+      const form = document.getElementById("form");
+      const engineSelect = document.getElementById("engine");
+      const submitBtn = document.getElementById("submit-btn");
+      const status = document.getElementById("status");
+      const result = document.getElementById("result");
+      const player = document.getElementById("player");
+      const downloadLink = document.getElementById("result-download");
+      const errorBox = document.getElementById("error");
+      const progressBar = document.getElementById("progress-bar");
+      const progress = document.getElementById("progress");
+      const voiceSelect = document.getElementById("voice");
+      const voiceLabel = document.getElementById("voice-label");
+      const voiceLabelText = document.getElementById("voice-label-text");
+      const exaggerationLabel = document.getElementById("exaggeration-label");
+      const speedLabel = document.getElementById("speed-label");
+      const voiceDescriptionLabel = document.getElementById(
+        "voice-description-label",
+      );
+      const languageLabel = document.getElementById("language-label");
 
-  <script>
-    (async () => {
-      try {
-        const voices = await fetch("/voices").then((r) => r.json());
-        const select = document.getElementById("voice");
+      let allVoices = { chatterbox: [], kokoro: [] };
+
+      (async () => {
+        try {
+          allVoices = await fetch("/voices").then((r) => r.json());
+          populateVoices("chatterbox");
+        } catch {}
+      })();
+
+      function populateVoices(engine) {
+        const voices = allVoices[engine] || [];
+        voiceSelect.innerHTML =
+          engine === "chatterbox" ? "<option value=''>– none –</option>" : "";
         for (const v of voices) {
           const opt = document.createElement("option");
           opt.value = v.filename;
           opt.textContent = v.label;
-          select.appendChild(opt);
+          voiceSelect.appendChild(opt);
         }
-      } catch {}
-    })();
+      }
 
-    const form = document.getElementById("form");
-    const submitBtn = document.getElementById("submit-btn");
-    const status = document.getElementById("status");
-    const result = document.getElementById("result");
-    const player = document.getElementById("player");
-    const downloadLink = document.getElementById("result-download");
-    const errorBox = document.getElementById("error");
-    const progressBar = document.getElementById("progress-bar");
-    const progress = document.getElementById("progress");
+      engineSelect.addEventListener("change", () => {
+        const engine = engineSelect.value;
+        exaggerationLabel.style.display = engine === "chatterbox" ? "" : "none";
+        speedLabel.style.display = engine === "kokoro" ? "" : "none";
+        voiceLabel.style.display = engine === "qwen3" ? "none" : "";
+        voiceLabelText.textContent =
+          engine === "chatterbox" ? "voice sample" : "voice";
+        voiceDescriptionLabel.style.display = engine === "qwen3" ? "" : "none";
+        languageLabel.style.display = engine === "qwen3" ? "" : "none";
+        if (engine !== "qwen3") populateVoices(engine);
+      });
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-      submitBtn.disabled = true;
-      status.textContent = "Generating...";
-      result.hidden = true;
-      errorBox.hidden = true;
-      progress.value = 0;
-      progressBar.hidden = false;
+        submitBtn.disabled = true;
+        status.textContent = "Generating...";
+        result.hidden = true;
+        errorBox.hidden = true;
+        const showProgress = engineSelect.value !== "qwen3";
+        progress.value = 0;
+        progressBar.hidden = !showProgress;
 
-      try {
-        const res = await fetch("/synthesize", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams(new FormData(form)),
-        });
+        try {
+          const res = await fetch("/synthesize", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams(new FormData(form)),
+          });
 
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `Server error ${res.status}`);
-        }
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || `Server error ${res.status}`);
+          }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
 
-        outer: while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop();
+          outer: while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop();
 
-          let eventType = null;
-          let eventData = null;
-          for (const line of lines) {
-            if (line.startsWith("event: ")) {
-              eventType = line.slice(7).trim();
-            } else if (line.startsWith("data: ")) {
-              eventData = line.slice(6).trim();
-            } else if (line === "" && eventType && eventData) {
-              const data = JSON.parse(eventData);
-              if (eventType === "progress") {
-                progress.value = data.value;
-              } else if (eventType === "done") {
-                progress.value = 1;
-                player.src = data.url;
-                downloadLink.href = data.url;
-                downloadLink.textContent = data.filename;
-                downloadLink.download = data.filename;
-                result.hidden = false;
-                result.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                player.play();
-                break outer;
-              } else if (eventType === "error") {
-                throw new Error(data.error);
+            let eventType = null;
+            let eventData = null;
+            for (const line of lines) {
+              if (line.startsWith("event: ")) {
+                eventType = line.slice(7).trim();
+              } else if (line.startsWith("data: ")) {
+                eventData = line.slice(6).trim();
+              } else if (line === "" && eventType && eventData) {
+                const data = JSON.parse(eventData);
+                if (eventType === "progress") {
+                  progress.value = data.value;
+                } else if (eventType === "done") {
+                  progress.value = 1;
+                  player.src = data.url;
+                  downloadLink.href = data.url;
+                  downloadLink.textContent = data.filename;
+                  downloadLink.download = data.filename;
+                  result.hidden = false;
+                  result.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                  });
+                  player.play();
+                  break outer;
+                } else if (eventType === "error") {
+                  throw new Error(data.error);
+                }
+                eventType = null;
+                eventData = null;
               }
-              eventType = null;
-              eventData = null;
             }
           }
+        } catch (err) {
+          errorBox.textContent = err.message;
+          errorBox.hidden = false;
+        } finally {
+          submitBtn.disabled = false;
+          status.textContent = "";
+          progressBar.hidden = true;
         }
-      } catch (err) {
-        errorBox.textContent = err.message;
-        errorBox.hidden = false;
-      } finally {
-        submitBtn.disabled = false;
-        status.textContent = "";
-        progressBar.hidden = true;
-      }
-    });
-  </script>
-</body>
-
+      });
+    </script>
+  </body>
 </html>
